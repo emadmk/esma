@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>سامانه آنالیز هزینه غذا | سود و زیان</title>
+    <link href="https://cdn.jsdelivr.net/npm/vazirmatn@33.0.3/Vazirmatn-font-face.css" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">
+                <span class="logo-icon">&#9781;</span>
+                <span class="logo-text">آنالیز هزینه غذا</span>
+            </div>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="#" class="nav-item active" data-page="dashboard">
+                <span class="nav-icon">&#9632;</span>
+                <span>داشبورد</span>
+            </a>
+            <a href="#" class="nav-item" data-page="foods">
+                <span class="nav-icon">&#9733;</span>
+                <span>لیست غذاها</span>
+            </a>
+            <a href="#" class="nav-item" data-page="ingredients">
+                <span class="nav-icon">&#9672;</span>
+                <span>قیمت مواد اولیه</span>
+            </a>
+            <a href="#" class="nav-item" data-page="overhead">
+                <span class="nav-icon">&#9881;</span>
+                <span>هزینه‌های سرباری</span>
+            </a>
+            <a href="#" class="nav-item" data-page="simulator">
+                <span class="nav-icon">&#9889;</span>
+                <span>شبیه‌ساز قیمت</span>
+            </a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Top bar -->
+        <header class="topbar">
+            <button class="menu-toggle" id="menuToggle">&#9776;</button>
+            <h1 class="page-title" id="pageTitle">داشبورد</h1>
+            <div class="topbar-actions">
+                <span class="selling-price-label">قیمت فروش هر پرس:</span>
+                <input type="text" id="globalSellingPrice" class="selling-price-input" value="">
+                <span class="currency">ریال</span>
+                <button class="btn btn-primary btn-sm" id="updateSellingPrice">ثبت</button>
+            </div>
+        </header>
+
+        <!-- Pages -->
+        <div class="page-content">
+            <!-- Dashboard Page -->
+            <section class="page active" id="page-dashboard">
+                <div class="summary-cards" id="summaryCards"></div>
+                <div class="charts-row">
+                    <div class="chart-card">
+                        <h3>سود و زیان هر غذا (ریال)</h3>
+                        <canvas id="profitLossChart"></canvas>
+                    </div>
+                    <div class="chart-card">
+                        <h3>ترکیب سود و زیان</h3>
+                        <canvas id="pieChart"></canvas>
+                    </div>
+                </div>
+                <div class="table-card">
+                    <h3>خلاصه وضعیت غذاها</h3>
+                    <table class="data-table" id="dashboardTable">
+                        <thead>
+                            <tr>
+                                <th>ردیف</th>
+                                <th>نام غذا</th>
+                                <th>نوع</th>
+                                <th>هزینه مواد خام</th>
+                                <th>هزینه تمام‌شده</th>
+                                <th>قیمت فروش</th>
+                                <th>سود/زیان</th>
+                                <th>وضعیت</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Foods Page -->
+            <section class="page" id="page-foods">
+                <div class="food-detail-container" id="foodDetailContainer">
+                    <p class="placeholder-text">برای مشاهده جزئیات، روی یک غذا در داشبورد کلیک کنید یا از لیست زیر انتخاب کنید.</p>
+                    <div class="food-cards" id="foodCards"></div>
+                </div>
+                <!-- Detail Modal -->
+                <div class="modal-overlay" id="foodModal">
+                    <div class="modal">
+                        <div class="modal-header">
+                            <h2 id="modalFoodName"></h2>
+                            <button class="modal-close" id="modalClose">&times;</button>
+                        </div>
+                        <div class="modal-body" id="modalBody"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Ingredients Page -->
+            <section class="page" id="page-ingredients">
+                <div class="page-header-row">
+                    <h2>قیمت مواد اولیه</h2>
+                    <input type="text" class="search-input" id="ingredientSearch" placeholder="جستجو...">
+                </div>
+                <div class="table-card">
+                    <table class="data-table" id="ingredientTable">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>نام ماده</th>
+                                <th>واحد</th>
+                                <th>قیمت هر گرم (ریال)</th>
+                                <th>قیمت واحد (ریال)</th>
+                                <th>توضیحات</th>
+                                <th>عملیات</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Overhead Page -->
+            <section class="page" id="page-overhead">
+                <h2>هزینه‌های سرباری و پارامترها</h2>
+                <div class="overhead-cards" id="overheadCards"></div>
+            </section>
+
+            <!-- Simulator Page -->
+            <section class="page" id="page-simulator">
+                <h2>شبیه‌ساز قیمت - ببین چقدر سود/زیان میشه!</h2>
+                <p class="sim-desc">قیمت مواد اولیه رو تغییر بده و ببین روی سود و زیان چه تاثیری داره.</p>
+                <div class="sim-layout">
+                    <div class="sim-controls">
+                        <div class="sim-section">
+                            <h3>قیمت فروش شبیه‌سازی (ریال)</h3>
+                            <input type="number" id="simSellingPrice" class="sim-input" placeholder="2150000">
+                        </div>
+                        <div class="sim-section">
+                            <h3>تغییر قیمت مواد کلیدی</h3>
+                            <div id="simIngredients"></div>
+                        </div>
+                        <div class="sim-section">
+                            <h3>تغییر پارامترهای سرباری</h3>
+                            <div id="simOverheads"></div>
+                        </div>
+                        <button class="btn btn-primary btn-lg" id="runSimulation">اجرای شبیه‌سازی</button>
+                    </div>
+                    <div class="sim-results">
+                        <h3>نتیجه شبیه‌سازی</h3>
+                        <div id="simResults">
+                            <p class="placeholder-text">ابتدا شبیه‌سازی را اجرا کنید.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Toast notification -->
+    <div class="toast" id="toast"></div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

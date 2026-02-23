@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+*.pyo
+app/food_cost.db
+*.xlsx
+.env
+venv/
+.venv/
