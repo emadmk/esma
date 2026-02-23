@@ -21,7 +21,7 @@
     --sidebar-w: 240px;
     --transition: .2s ease;
 }
-html { font-size: 13.5px; -webkit-text-size-adjust: 100%; }
+html { font-size: 14.5px; -webkit-text-size-adjust: 100%; }
 body {
     font-family: 'Vazirmatn', system-ui, -apple-system, sans-serif;
     background: var(--bg); color: var(--text);
@@ -185,12 +185,16 @@ input, button, select, textarea { font-family: inherit; font-size: inherit; }
 .data-table th {
     background: var(--bg); padding: 8px 10px; text-align: right;
     font-weight: 700; color: var(--text-secondary); border-bottom: 2px solid var(--border);
+    border-left: 1px solid rgba(226,232,240,.5);
     white-space: nowrap; position: sticky; top: 0; z-index: 5; font-size: .75rem;
 }
+.data-table th:last-child { border-left: none; }
 .data-table td {
     padding: 7px 10px; border-bottom: 1px solid var(--border);
+    border-left: 1px solid rgba(226,232,240,.5);
     vertical-align: middle;
 }
+.data-table td:last-child { border-left: none; }
 .data-table tr:hover td { background: var(--card-hover); }
 .data-table .num { text-align: center; font-family: 'Vazirmatn', monospace; direction: ltr; }
 .data-table .price { font-weight: 600; white-space: nowrap; }
