@@ -2,7 +2,7 @@
 <html lang="fa" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>سامانه آنالیز هزینه غذا</title>
     <link href="https://cdn.jsdelivr.net/npm/vazirmatn@33.0.3/Vazirmatn-font-face.css" rel="stylesheet">
     <link rel="stylesheet" href="/static/css/style.css">
@@ -16,14 +16,16 @@
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">
             <div class="logo">
-                <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3h18v18H3z"/><path d="M3 9h18M9 3v18"/></svg>
-                <span class="logo-text">آنالیز هزینه غذا</span>
+                <div class="logo-icon-wrap">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+                </div>
+                <span class="logo-text">آنالیز هزینه</span>
             </div>
             <button class="sidebar-close" id="sidebarClose">&times;</button>
         </div>
         <nav class="sidebar-nav">
             <a href="#" class="nav-item active" data-page="dashboard">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
                 <span>داشبورد</span>
             </a>
             <a href="#" class="nav-item" data-page="ingredients">
@@ -32,11 +34,11 @@
             </a>
             <div class="nav-group-label">غذاها</div>
             <a href="#" class="nav-item" data-page="foods1">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8h1a4 4 0 010 8h-1"/><path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/></svg>
                 <span>ریز غذا نوع ۱</span>
             </a>
             <a href="#" class="nav-item" data-page="foods2">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8h1a4 4 0 010 8h-1"/><path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/></svg>
                 <span>ریز غذا نوع ۲</span>
             </a>
             <div class="nav-group-label">هزینه‌ها</div>
@@ -49,7 +51,7 @@
                 <span>تجهیزات</span>
             </a>
             <a href="#" class="nav-item" data-page="labor">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
                 <span>نیروی انسانی</span>
             </a>
             <a href="#" class="nav-item" data-page="overhead_params">
@@ -62,7 +64,7 @@
             </a>
             <div class="nav-group-label">سایر</div>
             <a href="#" class="nav-item" data-page="side_dishes">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8h1a4 4 0 010 8h-1"/><path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
                 <span>دورچین</span>
             </a>
             <a href="#" class="nav-item" data-page="appendix">
@@ -70,7 +72,7 @@
                 <span>الحاقیه</span>
             </a>
             <a href="#" class="nav-item" data-page="weekly_menu">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                 <span>برنامه غذایی</span>
             </a>
             <a href="#" class="nav-item" data-page="analysis">
@@ -80,6 +82,11 @@
             <a href="#" class="nav-item" data-page="simulator">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13,2 3,14 12,14 11,22 21,10 12,10"/></svg>
                 <span>شبیه‌ساز</span>
+            </a>
+            <div class="nav-group-label">تنظیمات</div>
+            <a href="#" class="nav-item" data-page="price_settings">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+                <span>تنظیم قیمت‌ها</span>
             </a>
         </nav>
     </aside>
@@ -91,19 +98,6 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
             </button>
             <h1 class="page-title" id="pageTitle">داشبورد</h1>
-            <div class="topbar-actions">
-                <div class="price-group">
-                    <label>قیمت فروش نوع ۱:</label>
-                    <input type="text" id="sp1" class="price-input" value="">
-                    <span class="rial">ریال</span>
-                </div>
-                <div class="price-group">
-                    <label>قیمت فروش نوع ۲:</label>
-                    <input type="text" id="sp2" class="price-input" value="">
-                    <span class="rial">ریال</span>
-                </div>
-                <button class="btn btn-primary" id="updatePrices">ثبت</button>
-            </div>
         </header>
 
         <div class="page-container" id="pageContainer">
@@ -124,6 +118,10 @@
             <div class="modal-body" id="modalBody"></div>
         </div>
     </div>
+
+    <!-- Hidden inputs for selling prices (used by JS) -->
+    <input type="hidden" id="sp1" value="">
+    <input type="hidden" id="sp2" value="">
 
     <script src="/static/js/app.js"></script>
 </body>

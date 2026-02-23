@@ -1,7 +1,7 @@
 /* ===== Food Cost Analysis - Frontend App ===== */
 const $ = (s, p) => (p || document).querySelector(s);
 const $$ = (s, p) => [...(p || document).querySelectorAll(s)];
-const fmt = n => n == null ? '۰' : Math.round(n).toLocaleString('en-US');
+const fmt = n => n == null ? '0' : Math.round(n).toLocaleString('en-US');
 const fmtEn = n => n == null ? '0' : String(Math.round(n));
 
 let dashboardData = null;
@@ -41,6 +41,7 @@ const pages = {
     weekly_menu: { title: 'برنامه غذایی هفتگی', load: loadWeeklyMenu },
     analysis: { title: 'آنالیز پیوست', load: loadAnalysis },
     simulator: { title: 'شبیه‌ساز قیمت', load: loadSimulator },
+    price_settings: { title: 'تنظیم قیمت‌ها', load: loadPriceSettings },
 };
 
 $$('.nav-item').forEach(item => {
@@ -67,15 +68,6 @@ function navigateTo(page) {
     pages[page]?.load();
 }
 
-// Selling price update
-$('#updatePrices').addEventListener('click', async () => {
-    const sp1 = parseFloat($('#sp1').value.replace(/,/g, '')) || 0;
-    const sp2 = parseFloat($('#sp2').value.replace(/,/g, '')) || 0;
-    await api('/api/settings', { method: 'PUT', body: { selling_price_type1: sp1, selling_price_type2: sp2 } });
-    toast('قیمت فروش بروزرسانی شد');
-    navigateTo('dashboard');
-});
-
 function showModal(title, html) {
     $('#modalTitle').textContent = title;
     $('#modalBody').innerHTML = html;
@@ -85,7 +77,7 @@ function showModal(title, html) {
 // ===== Dashboard =====
 async function loadDashboard() {
     const c = $('#pageContainer');
-    c.innerHTML = '<div class="loading"><div class="spinner"></div><p>در حال بارگذاری...</p></div>';
+    c.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
     const data = await api('/api/dashboard');
     dashboardData = data;
 
@@ -103,17 +95,17 @@ async function loadDashboard() {
             <div class="summary-card profit">
                 <div class="summary-label">غذاهای سودده</div>
                 <div class="summary-value" style="color:var(--success)">${s.profit_count}</div>
-                <div class="summary-sub">مجموع سود: ${fmt(s.total_profit)} ریال</div>
+                <div class="summary-sub">سود: ${fmt(s.total_profit)} ریال</div>
             </div>
             <div class="summary-card loss">
                 <div class="summary-label">غذاهای زیان‌ده</div>
                 <div class="summary-value" style="color:var(--danger)">${s.loss_count}</div>
-                <div class="summary-sub">مجموع زیان: ${fmt(s.total_loss)} ریال</div>
+                <div class="summary-sub">زیان: ${fmt(s.total_loss)} ریال</div>
             </div>
             <div class="summary-card warning">
                 <div class="summary-label">میانگین سود/زیان</div>
                 <div class="summary-value ${s.avg_profit_loss >= 0 ? 'num-positive' : 'num-negative'}">${fmt(s.avg_profit_loss)}</div>
-                <div class="summary-sub">ریال به ازای هر پرس</div>
+                <div class="summary-sub">ریال / هر پرس</div>
             </div>
         </div>
         <div class="charts-grid">
@@ -121,31 +113,37 @@ async function loadDashboard() {
             <div class="chart-card"><h3>نسبت سود به زیان</h3><canvas id="pieChart"></canvas></div>
         </div>
         <div class="card">
-            <div class="card-header">جدول غذاها</div>
+            <div class="card-header">
+                <span>جدول غذاها</span>
+            </div>
             <div class="card-body">
                 <div class="search-bar">
-                    <input type="text" class="search-input" id="dashSearch" placeholder="جستجوی نام غذا...">
+                    <input type="text" class="search-input" id="dashSearch" placeholder="جستجو...">
                     <button class="filter-btn active" data-filter="all">همه</button>
                     <button class="filter-btn" data-filter="1">نوع ۱</button>
                     <button class="filter-btn" data-filter="2">نوع ۲</button>
                     <button class="filter-btn" data-filter="profit">سودده</button>
                     <button class="filter-btn" data-filter="loss">زیان‌ده</button>
                 </div>
-                <div class="table-wrapper">
-                    <table class="data-table" id="dashTable">
-                        <thead><tr>
-                            <th>#</th><th>کد</th><th>نام غذا</th><th>نوع</th>
-                            <th>هزینه خام</th><th>هزینه تمام‌شده</th><th>قیمت فروش</th>
-                            <th>سود/زیان</th><th>درصد</th><th>وضعیت</th>
-                        </tr></thead>
-                        <tbody id="dashTableBody"></tbody>
-                    </table>
+                <div class="desktop-table">
+                    <div class="table-wrapper">
+                        <table class="data-table" id="dashTable">
+                            <thead><tr>
+                                <th>#</th><th>نام غذا</th><th>نوع</th>
+                                <th>هزینه خام</th><th>تمام‌شده</th><th>فروش</th>
+                                <th>سود/زیان</th><th>%</th><th>وضعیت</th>
+                            </tr></thead>
+                            <tbody id="dashTableBody"></tbody>
+                        </table>
+                    </div>
                 </div>
+                <div class="mobile-cards" id="dashMobileCards"></div>
             </div>
         </div>`;
 
     renderDashTable(data.foods);
     renderCharts(data.foods);
+    setupMobileDetection();
 
     // Search and filter
     $('#dashSearch')?.addEventListener('input', () => filterDashTable(data.foods));
@@ -154,6 +152,18 @@ async function loadDashboard() {
         b.classList.add('active');
         filterDashTable(data.foods);
     }));
+}
+
+function setupMobileDetection() {
+    const check = () => {
+        const isMobile = window.innerWidth <= 768;
+        const dt = $('.desktop-table');
+        const mc = $('.mobile-cards');
+        if (dt) dt.style.display = isMobile ? 'none' : 'block';
+        if (mc) mc.style.display = isMobile ? 'block' : 'none';
+    };
+    check();
+    window.addEventListener('resize', check);
 }
 
 function filterDashTable(foods) {
@@ -169,22 +179,45 @@ function filterDashTable(foods) {
 }
 
 function renderDashTable(foods) {
+    // Desktop table
     const body = $('#dashTableBody');
-    if (!body) return;
-    body.innerHTML = foods.map((f, i) => `
-        <tr style="cursor:pointer" onclick="showFoodDetail(${f.id})">
-            <td class="num">${i + 1}</td>
-            <td class="num">${f.code}</td>
-            <td>${f.name}</td>
-            <td><span class="badge ${f.food_type === 1 ? 'badge-type1' : 'badge-type2'}">نوع ${f.food_type}</span></td>
-            <td class="num price">${fmt(f.raw_cost)}</td>
-            <td class="num price">${fmt(f.total_cost)}</td>
-            <td class="num price">${fmt(f.selling_price)}</td>
-            <td class="num ${f.is_profit ? 'profit' : 'loss'}">${fmt(f.profit_loss)}</td>
-            <td class="num ${f.is_profit ? 'profit' : 'loss'}">${f.profit_loss_pct}%</td>
-            <td><span class="badge ${f.is_profit ? 'badge-profit' : 'badge-loss'}">${f.is_profit ? 'سود' : 'زیان'}</span></td>
-        </tr>
-    `).join('');
+    if (body) {
+        body.innerHTML = foods.map((f, i) => `
+            <tr style="cursor:pointer" onclick="showFoodDetail(${f.id})">
+                <td class="num">${i + 1}</td>
+                <td><strong>${f.name}</strong></td>
+                <td><span class="badge ${f.food_type === 1 ? 'badge-type1' : 'badge-type2'}">نوع ${f.food_type}</span></td>
+                <td class="num price">${fmt(f.raw_cost)}</td>
+                <td class="num price">${fmt(f.total_cost)}</td>
+                <td class="num price">${fmt(f.selling_price)}</td>
+                <td class="num ${f.is_profit ? 'profit' : 'loss'}">${fmt(f.profit_loss)}</td>
+                <td class="num ${f.is_profit ? 'profit' : 'loss'}">${f.profit_loss_pct}%</td>
+                <td><span class="badge ${f.is_profit ? 'badge-profit' : 'badge-loss'}">${f.is_profit ? 'سود' : 'زیان'}</span></td>
+            </tr>
+        `).join('');
+    }
+
+    // Mobile cards
+    const mc = $('#dashMobileCards');
+    if (mc) {
+        mc.innerHTML = foods.map((f, i) => `
+            <div class="food-list-card" onclick="showFoodDetail(${f.id})">
+                <div class="food-list-card-top">
+                    <span class="food-list-card-name">${f.name}</span>
+                    <span class="badge ${f.food_type === 1 ? 'badge-type1' : 'badge-type2'}">نوع ${f.food_type}</span>
+                </div>
+                <div class="food-list-card-grid">
+                    <div class="food-list-card-item"><span class="lbl">خام:</span><span class="val">${fmt(f.raw_cost)}</span></div>
+                    <div class="food-list-card-item"><span class="lbl">تمام‌شده:</span><span class="val">${fmt(f.total_cost)}</span></div>
+                    <div class="food-list-card-item"><span class="lbl">فروش:</span><span class="val">${fmt(f.selling_price)}</span></div>
+                    <div class="food-list-card-item"><span class="lbl">سود/زیان:</span><span class="val ${f.is_profit ? 'num-positive' : 'num-negative'}">${fmt(f.profit_loss)}</span></div>
+                </div>
+                <div class="food-list-card-bottom">
+                    <span class="badge ${f.is_profit ? 'badge-profit' : 'badge-loss'}" style="font-size:.72rem">${f.is_profit ? 'سود' : 'زیان'}: ${f.profit_loss_pct}%</span>
+                </div>
+            </div>
+        `).join('');
+    }
 }
 
 function renderCharts(foods) {
@@ -201,15 +234,15 @@ function renderCharts(foods) {
                     label: 'سود/زیان',
                     data: foods.map(f => f.profit_loss),
                     backgroundColor: foods.map(f => f.is_profit ? 'rgba(16,185,129,.7)' : 'rgba(239,68,68,.7)'),
-                    borderRadius: 6, borderSkipped: false,
+                    borderRadius: 4, borderSkipped: false,
                 }]
             },
             options: {
                 indexAxis: 'y', responsive: true, maintainAspectRatio: false,
                 plugins: { legend: { display: false } },
                 scales: {
-                    x: { ticks: { callback: v => (v / 1000000).toFixed(1) + 'M', font: { family: 'Vazirmatn' } }, grid: { color: '#f1f5f9' } },
-                    y: { ticks: { font: { family: 'Vazirmatn', size: 11 } }, grid: { display: false } }
+                    x: { ticks: { callback: v => (v / 1000000).toFixed(1) + 'M', font: { family: 'Vazirmatn', size: 10 } }, grid: { color: '#f1f5f9' } },
+                    y: { ticks: { font: { family: 'Vazirmatn', size: 10 } }, grid: { display: false } }
                 }
             }
         });
@@ -227,7 +260,7 @@ function renderCharts(foods) {
             },
             options: {
                 responsive: true, maintainAspectRatio: false,
-                plugins: { legend: { position: 'bottom', labels: { font: { family: 'Vazirmatn', size: 13 } } } },
+                plugins: { legend: { position: 'bottom', labels: { font: { family: 'Vazirmatn', size: 11 }, padding: 12 } } },
                 cutout: '65%',
             }
         });
@@ -240,14 +273,14 @@ window.showFoodDetail = async function(foodId) {
     const f = data.food;
     const ings = data.ingredients;
     let html = `
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
             <div class="summary-card info"><div class="summary-label">کد</div><div class="summary-value">${f.code}</div></div>
             <div class="summary-card ${f.total_cost <= (dashboardData?.settings?.['selling_price_type' + f.food_type] || 2150000) ? 'profit' : 'loss'}">
                 <div class="summary-label">هزینه تمام‌شده</div>
                 <div class="summary-value">${fmt(f.total_cost)}</div>
             </div>
         </div>
-        <h3 style="margin-bottom:12px">مواد اولیه (${ings.length} ماده)</h3>
+        <h3 style="margin-bottom:10px;font-size:.9rem">مواد اولیه (${ings.length} ماده)</h3>
         <div class="table-wrapper">
         <table class="data-table">
             <thead><tr><th>#</th><th>ماده غذایی</th><th>مقدار</th><th>واحد</th><th>هزینه (ریال)</th></tr></thead>
@@ -261,7 +294,7 @@ window.showFoodDetail = async function(foodId) {
                 </tr>
             `).join('')}</tbody>
         </table></div>
-        <div style="margin-top:16px;padding:12px;background:#f8fafc;border-radius:8px;text-align:center">
+        <div style="margin-top:12px;padding:10px;background:var(--bg);border-radius:var(--radius-sm);text-align:center;font-size:.85rem">
             <strong>جمع هزینه مواد خام: ${fmt(f.raw_cost)} ریال</strong>
         </div>`;
     showModal(f.name, html);
@@ -276,13 +309,13 @@ async function loadIngredients() {
 
     c.innerHTML = `
         <div class="search-bar">
-            <input type="text" class="search-input" id="ingSearch" placeholder="جستجوی نام ماده اولیه...">
-            ${cats.map(cat => `<button class="filter-btn ${cat === '' ? '' : ''}" data-cat="${cat}">${cat || 'بدون دسته'}</button>`).join('')}
+            <input type="text" class="search-input" id="ingSearch" placeholder="جستجو...">
+            ${cats.map(cat => `<button class="filter-btn" data-cat="${cat}">${cat || 'بدون دسته'}</button>`).join('')}
         </div>
         <div class="card"><div class="card-body">
             <div class="table-wrapper">
                 <table class="data-table">
-                    <thead><tr><th>#</th><th>نام ماده</th><th>واحد</th><th>دسته</th><th>قیمت هر گرم</th><th>قیمت واحد</th><th>توضیحات</th><th></th></tr></thead>
+                    <thead><tr><th>#</th><th>نام ماده</th><th>واحد</th><th>دسته</th><th>قیمت/گرم</th><th>قیمت واحد</th><th>توضیحات</th></tr></thead>
                     <tbody id="ingBody"></tbody>
                 </table>
             </div>
@@ -306,8 +339,7 @@ function renderIngredients(items) {
             <td><span class="badge badge-type1">${ing.category}</span></td>
             <td class="num"><span class="editable-cell" onclick="editIngredient(${ing.id}, 'price_per_gram', ${ing.price_per_gram}, this)">${fmt(ing.price_per_gram)}</span></td>
             <td class="num"><span class="editable-cell" onclick="editIngredient(${ing.id}, 'price_per_unit', ${ing.price_per_unit}, this)">${fmt(ing.price_per_unit)}</span></td>
-            <td class="text-muted" style="font-size:.8rem;max-width:200px">${ing.notes}</td>
-            <td></td>
+            <td class="text-muted" style="font-size:.75rem;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${ing.notes}</td>
         </tr>
     `).join('');
 }
@@ -323,12 +355,6 @@ window.editIngredient = function(id, field, currentVal, el) {
 
     const save = async () => {
         const val = parseFloat(input.value) || 0;
-        const other = field === 'price_per_gram' ? 'price_per_unit' : 'price_per_gram';
-        const body = { [field]: val };
-        // Keep other field value
-        const row = input.closest('tr');
-        const cells = row.querySelectorAll('.editable-cell');
-        body[other] = currentVal; // simplified
         await api(`/api/ingredients/${id}`, { method: 'PUT', body: { price_per_gram: field === 'price_per_gram' ? val : currentVal, price_per_unit: field === 'price_per_unit' ? val : currentVal } });
         toast('قیمت بروزرسانی شد');
         loadIngredients();
@@ -347,7 +373,7 @@ async function loadFoods(type) {
 
     c.innerHTML = `
         <div class="search-bar">
-            <input type="text" class="search-input" id="foodSearch" placeholder="جستجوی نام غذا...">
+            <input type="text" class="search-input" id="foodSearch" placeholder="جستجو...">
         </div>
         <div class="food-grid" id="foodGrid"></div>`;
 
@@ -372,11 +398,11 @@ function renderFoodCards(foods, sp) {
             </div>
             <div class="food-card-body">
                 <div class="food-card-row"><span class="label">هزینه خام:</span><span class="value">${fmt(f.raw_cost)}</span></div>
-                <div class="food-card-row"><span class="label">هزینه تمام‌شده:</span><span class="value">${fmt(f.total_cost)}</span></div>
-                <div class="food-card-row"><span class="label">قیمت فروش:</span><span class="value">${fmt(sp)}</span></div>
+                <div class="food-card-row"><span class="label">تمام‌شده:</span><span class="value">${fmt(f.total_cost)}</span></div>
+                <div class="food-card-row"><span class="label">فروش:</span><span class="value">${fmt(sp)}</span></div>
             </div>
             <div class="food-card-footer">
-                <span class="badge ${isProfit ? 'badge-profit' : 'badge-loss'}" style="font-size:.9rem;padding:6px 16px">
+                <span class="badge ${isProfit ? 'badge-profit' : 'badge-loss'}" style="font-size:.8rem;padding:4px 14px">
                     ${isProfit ? 'سود' : 'زیان'}: ${fmt(Math.abs(diff))} ریال
                 </span>
             </div>
@@ -391,13 +417,13 @@ async function loadConsumables() {
     const data = await api('/api/consumables');
 
     c.innerHTML = `
-        <div class="summary-grid">
+        <div class="summary-grid" style="grid-template-columns: repeat(2, 1fr)">
             <div class="summary-card info">
                 <div class="summary-label">تعداد اقلام</div>
                 <div class="summary-value">${data.consumables.length}</div>
             </div>
             <div class="summary-card warning">
-                <div class="summary-label">جمع هزینه سرباری هر پرس</div>
+                <div class="summary-label">جمع هزینه سرباری / پرس</div>
                 <div class="summary-value">${fmt(data.total)}</div>
                 <div class="summary-sub">ریال</div>
             </div>
@@ -405,12 +431,12 @@ async function loadConsumables() {
         <div class="card"><div class="card-header">لیست اقلام مصرفی</div><div class="card-body">
             <div class="table-wrapper">
                 <table class="data-table">
-                    <thead><tr><th>#</th><th>نام قلم</th><th>توضیحات</th><th>هزینه هر پرس (ریال)</th></tr></thead>
+                    <thead><tr><th>#</th><th>نام قلم</th><th>توضیحات</th><th>هزینه/پرس (ریال)</th></tr></thead>
                     <tbody>${data.consumables.map((item, i) => `
                         <tr>
                             <td class="num">${i + 1}</td>
                             <td><strong>${item.name}</strong></td>
-                            <td style="font-size:.8rem;color:var(--text-secondary)">${item.description}</td>
+                            <td style="font-size:.75rem;color:var(--text-secondary)">${item.description}</td>
                             <td class="num"><span class="editable-cell" onclick="editConsumable(${item.id}, ${item.cost_per_serving}, this)">${fmt(item.cost_per_serving)}</span></td>
                         </tr>
                     `).join('')}</tbody>
@@ -438,13 +464,13 @@ async function loadEquipment() {
     const data = await api('/api/equipment');
 
     c.innerHTML = `
-        <div class="summary-grid">
+        <div class="summary-grid" style="grid-template-columns: repeat(2, 1fr)">
             <div class="summary-card info">
                 <div class="summary-label">تعداد تجهیزات</div>
                 <div class="summary-value">${data.equipment.length}</div>
             </div>
             <div class="summary-card warning">
-                <div class="summary-label">جمع کل هزینه تجهیزات</div>
+                <div class="summary-label">جمع کل هزینه</div>
                 <div class="summary-value">${fmt(data.total)}</div>
                 <div class="summary-sub">ریال</div>
             </div>
@@ -453,7 +479,7 @@ async function loadEquipment() {
             <div class="search-bar"><input type="text" class="search-input" id="eqSearch" placeholder="جستجو..."></div>
             <div class="table-wrapper">
                 <table class="data-table" id="eqTable">
-                    <thead><tr><th>#</th><th>نام تجهیزات</th><th>تعداد</th><th>واحد</th><th>قیمت واحد</th><th>قیمت کل</th></tr></thead>
+                    <thead><tr><th>#</th><th>نام</th><th>تعداد</th><th>واحد</th><th>قیمت واحد</th><th>قیمت کل</th></tr></thead>
                     <tbody id="eqBody"></tbody>
                 </table>
             </div>
@@ -493,16 +519,16 @@ async function loadLabor() {
             <div class="tab" data-tab="drivers">رانندگان</div>
         </div>
         <div id="laborContent">
-            <div class="card"><div class="card-header">آنالیز نیروی کار</div><div class="card-body">
+            <div class="card"><div class="card-body">
                 <div class="table-wrapper">
                     <table class="data-table">
-                        <thead><tr><th>#</th><th>دسته</th><th>پست</th><th>شرح شغل</th><th>تعداد پست</th><th>تعداد نفر</th><th>حقوق ناخالص</th><th>حقوق ماهیانه</th></tr></thead>
+                        <thead><tr><th>#</th><th>دسته</th><th>پست</th><th>شرح</th><th>ت. پست</th><th>ت. نفر</th><th>حقوق ناخالص</th><th>ماهیانه</th></tr></thead>
                         <tbody>${laborData.positions.map((p, i) => `
                             <tr>
                                 <td class="num">${i + 1}</td>
                                 <td><span class="badge badge-type1">${p.category}</span></td>
                                 <td>${p.position_name}</td>
-                                <td style="font-size:.8rem">${p.job_title}</td>
+                                <td style="font-size:.75rem">${p.job_title}</td>
                                 <td class="num">${p.post_count}</td>
                                 <td class="num">${p.person_count}</td>
                                 <td class="num price">${fmt(p.gross_salary)}</td>
@@ -514,10 +540,10 @@ async function loadLabor() {
             </div></div>
         </div>
         <div id="driversContent" style="display:none">
-            <div class="card"><div class="card-header">آنالیز رانندگان داخل مجتمع</div><div class="card-body">
+            <div class="card"><div class="card-body">
                 <div class="table-wrapper">
                     <table class="data-table">
-                        <thead><tr><th>#</th><th>دسته</th><th>شرح شغل</th><th>تعداد پست</th><th>تعداد نفر</th><th>حقوق ناخالص</th><th>حقوق ماهیانه</th></tr></thead>
+                        <thead><tr><th>#</th><th>دسته</th><th>شرح</th><th>ت. پست</th><th>ت. نفر</th><th>حقوق ناخالص</th><th>ماهیانه</th></tr></thead>
                         <tbody>${driverData.positions.map((p, i) => `
                             <tr>
                                 <td class="num">${i + 1}</td>
@@ -552,11 +578,11 @@ async function loadOverheadParams() {
     const t2 = data.params.filter(p => p.food_type === 2);
 
     c.innerHTML = `
-        <h3 class="mb-16">پارامترهای مشترک</h3>
-        <div class="param-grid mb-24">${shared.map(renderParamCard).join('')}</div>
-        <h3 class="mb-16">پارامترهای نوع ۱</h3>
-        <div class="param-grid mb-24">${t1.map(renderParamCard).join('')}</div>
-        <h3 class="mb-16">پارامترهای نوع ۲</h3>
+        <div class="section-title mb-8">پارامترهای مشترک</div>
+        <div class="param-grid mb-16">${shared.map(renderParamCard).join('')}</div>
+        <div class="section-title mb-8">پارامترهای نوع ۱</div>
+        <div class="param-grid mb-16">${t1.map(renderParamCard).join('')}</div>
+        <div class="section-title mb-8">پارامترهای نوع ۲</div>
         <div class="param-grid">${t2.map(renderParamCard).join('')}</div>`;
 }
 
@@ -613,7 +639,7 @@ async function loadOverheadCalcType(type) {
     if (type === '1') {
         cont.innerHTML = `<div class="card"><div class="card-body"><div class="table-wrapper">
             <table class="data-table">
-                <thead><tr><th>کد</th><th>غذا</th><th>خام</th><th>سرباری</th><th>بیمه تکمیلی</th><th>رانندگان</th><th>ماشین</th><th>نیرو</th><th>استهلاک</th><th>میوه</th><th>آب</th><th>دلستر</th><th>دورچین</th><th>تورم</th><th>بیمه قرارداد</th><th>مالیات</th><th>سود</th></tr></thead>
+                <thead><tr><th>کد</th><th>غذا</th><th>خام</th><th>سرباری</th><th>بیمه</th><th>رانندگان</th><th>ماشین</th><th>نیرو</th><th>استهلاک</th><th>میوه</th><th>آب</th><th>دلستر</th><th>دورچین</th><th>تورم</th><th>بیمه ق.</th><th>مالیات</th><th>سود</th></tr></thead>
                 <tbody>${items.map(d => `
                     <tr>
                         <td class="num">${d.food_code}</td><td>${d.food_name}</td>
@@ -634,7 +660,7 @@ async function loadOverheadCalcType(type) {
                         <td class="num">${fmt(d.profit_margin)}</td>
                     </tr>
                 `).join('')}
-                ${avg ? `<tr style="font-weight:700;background:#f8fafc"><td></td><td>میانگین</td>
+                ${avg ? `<tr style="font-weight:700;background:var(--bg)"><td></td><td>میانگین</td>
                     <td class="num">${fmt(avg.raw_cost)}</td><td class="num">${fmt(avg.consumables)}</td>
                     <td class="num">${fmt(avg.supplementary_insurance)}</td><td class="num">${fmt(avg.driver_salary)}</td>
                     <td class="num">${fmt(avg.vehicle_rental)}</td><td class="num">${fmt(avg.labor_cost)}</td>
@@ -648,7 +674,7 @@ async function loadOverheadCalcType(type) {
     } else {
         cont.innerHTML = `<div class="card"><div class="card-body"><div class="table-wrapper">
             <table class="data-table">
-                <thead><tr><th>کد</th><th>غذا</th><th>خام</th><th>سرباری</th><th>بیمه</th><th>رانندگان</th><th>ماشین</th><th>نیرو</th><th>استهلاک</th><th>نوشیدنی</th><th>دورچین</th><th>تورم</th><th>بیمه قرارداد</th><th>مالیات</th><th>سود</th><th>تمام‌شده</th></tr></thead>
+                <thead><tr><th>کد</th><th>غذا</th><th>خام</th><th>سرباری</th><th>بیمه</th><th>رانندگان</th><th>ماشین</th><th>نیرو</th><th>استهلاک</th><th>نوشیدنی</th><th>دورچین</th><th>تورم</th><th>بیمه ق.</th><th>مالیات</th><th>سود</th><th>تمام‌شده</th></tr></thead>
                 <tbody>${items.map(d => `
                     <tr>
                         <td class="num">${d.food_code}</td><td>${d.food_name}</td>
@@ -668,7 +694,7 @@ async function loadOverheadCalcType(type) {
                         <td class="num price fw-bold">${fmt(d.total_cost)}</td>
                     </tr>
                 `).join('')}
-                ${avg ? `<tr style="font-weight:700;background:#f8fafc"><td></td><td>میانگین</td>
+                ${avg ? `<tr style="font-weight:700;background:var(--bg)"><td></td><td>میانگین</td>
                     <td class="num">${fmt(avg.raw_cost)}</td><td class="num">${fmt(avg.consumables)}</td>
                     <td class="num">${fmt(avg.supplementary_insurance)}</td><td class="num">${fmt(avg.driver_salary)}</td>
                     <td class="num">${fmt(avg.vehicle_rental)}</td><td class="num">${fmt(avg.labor_cost)}</td>
@@ -691,21 +717,21 @@ async function loadSideDishes() {
     const g3 = data.side_dishes.filter(d => d.col_group === 3);
 
     c.innerHTML = `
-        <h3 class="mb-16">دورچین - گروه ۱</h3>
-        <div class="dish-grid mb-24">${g1.map(d => `
+        <div class="section-title mb-8">دورچین - گروه ۱</div>
+        <div class="dish-grid mb-16">${g1.map(d => `
             <div class="dish-card">
                 <div><div class="dish-name">${d.name}</div>${d.notes ? `<div class="dish-notes">${d.notes}</div>` : ''}</div>
                 <span class="editable-cell dish-price" onclick="editSideDish(${d.id}, ${d.price}, this)">${fmt(d.price)}</span>
             </div>
         `).join('')}</div>
-        <h3 class="mb-16">دورچین - گروه ۲</h3>
-        <div class="dish-grid mb-24">${g2.map(d => `
+        <div class="section-title mb-8">دورچین - گروه ۲</div>
+        <div class="dish-grid mb-16">${g2.map(d => `
             <div class="dish-card">
                 <div><div class="dish-name">${d.name}</div>${d.notes ? `<div class="dish-notes">${d.notes}</div>` : ''}</div>
                 <span class="editable-cell dish-price" onclick="editSideDish(${d.id}, ${d.price}, this)">${fmt(d.price)}</span>
             </div>
         `).join('')}</div>
-        <h3 class="mb-16">ظروف و لوازم</h3>
+        <div class="section-title mb-8">ظروف و لوازم</div>
         <div class="dish-grid">${g3.map(d => `
             <div class="dish-card">
                 <div><div class="dish-name">${d.name}</div></div>
@@ -717,7 +743,7 @@ async function loadSideDishes() {
 window.editSideDish = function(id, currentVal, el) {
     const input = document.createElement('input');
     input.className = 'edit-input'; input.value = Math.round(currentVal); input.type = 'number';
-    input.style.width = '120px';
+    input.style.width = '100px';
     el.replaceWith(input); input.focus(); input.select();
     const save = async () => {
         await api(`/api/side_dishes/${id}`, { method: 'PUT', body: { price: parseFloat(input.value) || 0, name: input.closest('.dish-card').querySelector('.dish-name').textContent, notes: '' } });
@@ -739,7 +765,7 @@ async function loadAppendix() {
         <div class="card"><div class="card-header">الحاقیه - قیمت‌های بروز</div><div class="card-body">
             <div class="table-wrapper">
                 <table class="data-table">
-                    <thead><tr><th>ردیف</th><th>کد</th><th>نام غذا</th><th>قیمت الحاقیه</th><th>قیمت تمام‌شده</th><th>تفاوت</th></tr></thead>
+                    <thead><tr><th>ردیف</th><th>کد</th><th>نام غذا</th><th>قیمت الحاقیه</th><th>تمام‌شده</th><th>تفاوت</th></tr></thead>
                     <tbody>
                         ${items.map((item, i) => {
                             const diff = item.appendix_price - item.calculated_price;
@@ -752,7 +778,7 @@ async function loadAppendix() {
                                 <td class="num ${diff >= 0 ? 'loss' : 'profit'}">${fmt(diff)}</td>
                             </tr>`;
                         }).join('')}
-                        ${avg ? `<tr style="font-weight:700;background:#f8fafc"><td></td><td></td><td>میانگین</td><td class="num price">${fmt(avg.appendix_price)}</td><td></td><td></td></tr>` : ''}
+                        ${avg ? `<tr style="font-weight:700;background:var(--bg)"><td></td><td></td><td>میانگین</td><td class="num price">${fmt(avg.appendix_price)}</td><td></td><td></td></tr>` : ''}
                     </tbody>
                 </table>
             </div>
@@ -784,10 +810,10 @@ async function loadWeeklyMenu() {
                 <span class="menu-card-date">${day.date_str}</span>
             </div>
             <div class="menu-card-body">
-                <div class="menu-card-item"><span class="menu-card-label">غذا نوع ۱:</span><span>${day.food_type1}</span></div>
+                <div class="menu-card-item"><span class="menu-card-label">نوع ۱:</span><span>${day.food_type1}</span></div>
                 ${day.food_type1_special ? `<div class="menu-card-item"><span class="menu-card-label">اختصاصی:</span><span>${day.food_type1_special}</span></div>` : ''}
-                <div class="menu-card-item"><span class="menu-card-label">غذا نوع ۲:</span><span>${day.food_type2}</span></div>
-                ${day.dessert_desc ? `<div class="menu-card-item"><span class="menu-card-label">دسر:</span><span style="font-size:.8rem">${day.dessert_desc}</span></div>` : ''}
+                <div class="menu-card-item"><span class="menu-card-label">نوع ۲:</span><span>${day.food_type2}</span></div>
+                ${day.dessert_desc ? `<div class="menu-card-item"><span class="menu-card-label">دسر:</span><span style="font-size:.78rem">${day.dessert_desc}</span></div>` : ''}
                 ${day.drink ? `<div class="menu-card-item"><span class="menu-card-label">نوشیدنی:</span><span>${day.drink}</span></div>` : ''}
                 ${day.salad ? `<div class="menu-card-item"><span class="menu-card-label">سالاد:</span><span>${day.salad} (${fmt(day.salad_price)} ریال)</span></div>` : ''}
                 ${day.special_item ? `<div class="menu-card-item"><span class="menu-card-label">ویژه:</span><span>${day.special_item} (${fmt(day.special_price)} ریال)</span></div>` : ''}
@@ -803,7 +829,7 @@ async function loadAnalysis() {
     const data = await api('/api/analysis_attachment');
 
     c.innerHTML = `
-        <p class="text-muted mb-16" style="font-size:.9rem">این بخش آنالیز پیوست اکسل را نشان می‌دهد. مقادیر ممکن است با شیت ریز غذا تفاوت داشته باشد.</p>
+        <p class="text-muted mb-12" style="font-size:.82rem">آنالیز پیوست اکسل. مقادیر ممکن است با شیت ریز غذا تفاوت داشته باشد.</p>
         <div class="food-grid">${data.foods.map(f => `
             <div class="food-card" onclick="showAnalysisDetail(${f.id}, '${f.food_name}', ${JSON.stringify(f.ingredients).replace(/"/g, '&quot;')})">
                 <div class="food-card-header">
@@ -827,6 +853,183 @@ window.showAnalysisDetail = function(id, name, ingredients) {
     showModal(`آنالیز پیوست: ${name}`, html);
 };
 
+// ===== Price Settings Page =====
+async function loadPriceSettings() {
+    const c = $('#pageContainer');
+    c.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+
+    const [settingsData, ingData, consumablesData, paramData] = await Promise.all([
+        api('/api/settings'),
+        api('/api/ingredients'),
+        api('/api/consumables'),
+        api('/api/overhead_params'),
+    ]);
+
+    const settings = settingsData.settings;
+    const keyIngs = ingData.ingredients.filter(i => i.price_per_gram > 500).slice(0, 20);
+    const consumables = consumablesData.consumables;
+    const fixedParams = paramData.params.filter(p => p.param_type === 'fixed' && p.food_type === 0);
+    const pctParams = paramData.params.filter(p => p.param_type === 'percent');
+
+    c.innerHTML = `
+        <div class="price-settings-page">
+            <div class="price-settings-hero">
+                <div class="price-settings-hero-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+                </div>
+                <h2>تنظیم قیمت‌های فروش و متغیرها</h2>
+                <p>از اینجا می‌توانید قیمت فروش هر پرس و قیمت‌های متغیر را تغییر دهید</p>
+            </div>
+
+            <!-- Selling Prices -->
+            <div class="price-card">
+                <div class="price-card-header">
+                    <div class="price-card-icon type1"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M18 8h1a4 4 0 010 8h-1"/><path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/></svg></div>
+                    <div>
+                        <div class="price-card-title">قیمت فروش نوع ۱</div>
+                        <div class="price-card-subtitle">قیمت هر پرس غذای نوع اول</div>
+                    </div>
+                </div>
+                <div class="price-card-input-row">
+                    <input type="text" class="price-card-input" id="psSp1" value="${fmt(settings.selling_price_type1)}">
+                    <span class="price-card-unit">ریال</span>
+                </div>
+            </div>
+
+            <div class="price-card">
+                <div class="price-card-header">
+                    <div class="price-card-icon type2"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M18 8h1a4 4 0 010 8h-1"/><path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/></svg></div>
+                    <div>
+                        <div class="price-card-title">قیمت فروش نوع ۲</div>
+                        <div class="price-card-subtitle">قیمت هر پرس غذای نوع دوم</div>
+                    </div>
+                </div>
+                <div class="price-card-input-row">
+                    <input type="text" class="price-card-input" id="psSp2" value="${fmt(settings.selling_price_type2)}">
+                    <span class="price-card-unit">ریال</span>
+                </div>
+            </div>
+
+            <div class="price-save-row">
+                <button class="btn btn-primary btn-lg" id="psSaveSellingPrices">ذخیره قیمت‌های فروش</button>
+            </div>
+
+            <!-- Variable Ingredient Prices -->
+            <div class="var-prices-section">
+                <h3>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 12l2 2 4-4"/></svg>
+                    قیمت مواد اولیه کلیدی
+                </h3>
+                ${keyIngs.map(i => `
+                    <div class="var-price-item">
+                        <div class="var-price-info">
+                            <div class="var-price-name">${i.name}</div>
+                            <div class="var-price-desc">${i.category} - ${i.unit}</div>
+                        </div>
+                        <div class="var-price-value">
+                            <input type="number" class="var-price-input" id="vi_${i.id}" value="${Math.round(i.price_per_gram)}" data-id="${i.id}" data-ppu="${i.price_per_unit}">
+                            <span class="var-price-unit">ریال/گرم</span>
+                            <button class="btn btn-sm btn-ghost" onclick="saveVarIng(${i.id})">ثبت</button>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+
+            <!-- Variable Consumable Prices -->
+            <div class="var-prices-section">
+                <h3>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/></svg>
+                    هزینه اقلام مصرفی
+                </h3>
+                ${consumables.map(item => `
+                    <div class="var-price-item">
+                        <div class="var-price-info">
+                            <div class="var-price-name">${item.name}</div>
+                            <div class="var-price-desc">${item.description}</div>
+                        </div>
+                        <div class="var-price-value">
+                            <input type="number" class="var-price-input" id="vc_${item.id}" value="${Math.round(item.cost_per_serving)}" data-id="${item.id}" data-name="${item.name}" data-desc="${item.description}">
+                            <span class="var-price-unit">ریال/پرس</span>
+                            <button class="btn btn-sm btn-ghost" onclick="saveVarCons(${item.id})">ثبت</button>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+
+            <!-- Overhead Params -->
+            <div class="var-prices-section">
+                <h3>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4"/></svg>
+                    پارامترهای هزینه‌ای (ثابت)
+                </h3>
+                ${fixedParams.map(p => `
+                    <div class="var-price-item">
+                        <div class="var-price-info">
+                            <div class="var-price-name">${p.label}</div>
+                            <div class="var-price-desc">${p.description}</div>
+                        </div>
+                        <div class="var-price-value">
+                            <input type="number" class="var-price-input" id="vp_${p.id}" value="${Math.round(p.value)}">
+                            <span class="var-price-unit">ریال/پرس</span>
+                            <button class="btn btn-sm btn-ghost" onclick="saveVarParam(${p.id})">ثبت</button>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+
+            <div class="var-prices-section mb-24">
+                <h3>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>
+                    پارامترهای درصدی
+                </h3>
+                ${pctParams.map(p => `
+                    <div class="var-price-item">
+                        <div class="var-price-info">
+                            <div class="var-price-name">${p.label}</div>
+                            <div class="var-price-desc">${p.description}</div>
+                        </div>
+                        <div class="var-price-value">
+                            <input type="number" class="var-price-input" id="vp_${p.id}" value="${p.value}" step="0.1">
+                            <span class="var-price-unit">درصد</span>
+                            <button class="btn btn-sm btn-ghost" onclick="saveVarParam(${p.id})">ثبت</button>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        </div>`;
+
+    // Save selling prices
+    $('#psSaveSellingPrices')?.addEventListener('click', async () => {
+        const sp1 = parseFloat($('#psSp1').value.replace(/,/g, '')) || 0;
+        const sp2 = parseFloat($('#psSp2').value.replace(/,/g, '')) || 0;
+        await api('/api/settings', { method: 'PUT', body: { selling_price_type1: sp1, selling_price_type2: sp2 } });
+        $('#sp1').value = fmtEn(sp1);
+        $('#sp2').value = fmtEn(sp2);
+        toast('قیمت‌های فروش بروزرسانی شد');
+    });
+}
+
+window.saveVarIng = async function(id) {
+    const input = $(`#vi_${id}`);
+    const val = parseFloat(input.value) || 0;
+    const ppu = parseFloat(input.dataset.ppu) || 0;
+    await api(`/api/ingredients/${id}`, { method: 'PUT', body: { price_per_gram: val, price_per_unit: ppu } });
+    toast('قیمت ماده اولیه بروزرسانی شد');
+};
+
+window.saveVarCons = async function(id) {
+    const input = $(`#vc_${id}`);
+    const val = parseFloat(input.value) || 0;
+    await api(`/api/consumables/${id}`, { method: 'PUT', body: { cost_per_serving: val, name: input.dataset.name, description: input.dataset.desc } });
+    toast('هزینه مصرفی بروزرسانی شد');
+};
+
+window.saveVarParam = async function(id) {
+    const val = parseFloat($(`#vp_${id}`).value) || 0;
+    await api(`/api/overhead_params/${id}`, { method: 'PUT', body: { value: val } });
+    toast('پارامتر بروزرسانی شد');
+};
+
 // ===== Simulator =====
 async function loadSimulator() {
     const c = $('#pageContainer');
@@ -842,24 +1045,24 @@ async function loadSimulator() {
     c.innerHTML = `
         <div class="sim-layout">
             <div>
-                <div class="card mb-16"><div class="card-header">قیمت فروش شبیه‌سازی</div><div class="card-body">
-                    <div class="sim-row"><label>نوع ۱:</label><input type="number" id="simSP1" value="${settings.selling_price_type1 || 2150000}"><span class="rial">ریال</span></div>
-                    <div class="sim-row"><label>نوع ۲:</label><input type="number" id="simSP2" value="${settings.selling_price_type2 || 2150000}"><span class="rial">ریال</span></div>
+                <div class="card mb-12"><div class="card-header">قیمت فروش شبیه‌سازی</div><div class="card-body">
+                    <div class="sim-row"><label>نوع ۱:</label><input type="number" id="simSP1" value="${settings.selling_price_type1 || 2150000}"><span class="var-price-unit">ریال</span></div>
+                    <div class="sim-row"><label>نوع ۲:</label><input type="number" id="simSP2" value="${settings.selling_price_type2 || 2150000}"><span class="var-price-unit">ریال</span></div>
                 </div></div>
-                <div class="card mb-16"><div class="card-header">تغییر قیمت مواد کلیدی</div><div class="card-body">
+                <div class="card mb-12"><div class="card-header">تغییر قیمت مواد کلیدی</div><div class="card-body">
                     ${keyIngs.map(i => `
-                        <div class="sim-row"><label>${i.name}</label><input type="number" class="sim-ing" data-name="${i.name}" value="${Math.round(i.price_per_gram)}"><span class="rial">ر/گ</span></div>
+                        <div class="sim-row"><label>${i.name}</label><input type="number" class="sim-ing" data-name="${i.name}" value="${Math.round(i.price_per_gram)}"><span class="var-price-unit">ر/گ</span></div>
                     `).join('')}
                 </div></div>
-                <div class="card mb-16"><div class="card-header">تغییر پارامترهای سرباری</div><div class="card-body">
+                <div class="card mb-12"><div class="card-header">تغییر پارامترهای سرباری</div><div class="card-body">
                     ${params.filter(p => p.param_type === 'fixed' && p.food_type === 0).map(p => `
-                        <div class="sim-row"><label>${p.label}</label><input type="number" class="sim-param" data-name="${p.name}" value="${Math.round(p.value)}"><span class="rial">ریال</span></div>
+                        <div class="sim-row"><label>${p.label}</label><input type="number" class="sim-param" data-name="${p.name}" value="${Math.round(p.value)}"><span class="var-price-unit">ریال</span></div>
                     `).join('')}
                     ${params.filter(p => p.param_type === 'percent').map(p => `
-                        <div class="sim-row"><label>${p.label}</label><input type="number" class="sim-param" data-name="${p.name}" value="${p.value}" step="0.1"><span>%</span></div>
+                        <div class="sim-row"><label>${p.label}</label><input type="number" class="sim-param" data-name="${p.name}" value="${p.value}" step="0.1"><span class="var-price-unit">%</span></div>
                     `).join('')}
                 </div></div>
-                <button class="btn btn-primary" id="runSim" style="width:100%;padding:14px;font-size:1rem">اجرای شبیه‌سازی</button>
+                <button class="btn btn-primary btn-lg" id="runSim" style="width:100%">اجرای شبیه‌سازی</button>
             </div>
             <div>
                 <div class="card"><div class="card-header">نتیجه شبیه‌سازی</div><div class="card-body" id="simResults">
@@ -891,7 +1094,7 @@ async function runSimulation() {
     const totalLoss = data.foods.filter(f => !f.is_profit).reduce((s, f) => s + Math.abs(f.profit_loss), 0);
 
     results.innerHTML = `
-        <div class="summary-grid mb-16" style="grid-template-columns:1fr 1fr">
+        <div class="summary-grid mb-12" style="grid-template-columns:1fr 1fr">
             <div class="summary-card profit"><div class="summary-label">مجموع سود</div><div class="summary-value" style="color:var(--success)">${fmt(totalProfit)}</div></div>
             <div class="summary-card loss"><div class="summary-label">مجموع زیان</div><div class="summary-value" style="color:var(--danger)">${fmt(totalLoss)}</div></div>
         </div>
