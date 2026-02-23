@@ -17,5 +17,5 @@ echo "Extracting data from Excel..."
 python3 app/extract_data.py
 
 # Run the server
-echo "Starting server on port 5000..."
+echo "Starting server on port 8080..."
 python3 app/main.py
