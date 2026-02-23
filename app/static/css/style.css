@@ -26,7 +26,7 @@ body {
     font-family: 'Vazirmatn', system-ui, -apple-system, sans-serif;
     background: var(--bg); color: var(--text);
     min-height: 100vh; min-height: 100dvh; display: flex; overflow-x: hidden;
-    line-height: 1.6;
+    line-height: 1.6; max-width: 100vw;
 }
 a { text-decoration: none; color: inherit; }
 input, button, select, textarea { font-family: inherit; font-size: inherit; }
@@ -75,7 +75,7 @@ input, button, select, textarea { font-family: inherit; font-size: inherit; }
 /* ===== Main Content ===== */
 .main-content {
     flex: 1; margin-right: var(--sidebar-w); min-height: 100vh; min-height: 100dvh;
-    display: flex; flex-direction: column;
+    display: flex; flex-direction: column; overflow-x: hidden; min-width: 0;
 }
 .topbar {
     background: var(--card); border-bottom: 1px solid var(--border);
@@ -89,7 +89,7 @@ input, button, select, textarea { font-family: inherit; font-size: inherit; }
 .menu-toggle svg { width: 22px; height: 22px; color: var(--text); }
 .page-title { font-size: 1.15rem; font-weight: 700; }
 
-.page-container { padding: 16px; flex: 1; }
+.page-container { padding: 16px; flex: 1; overflow-x: hidden; min-width: 0; max-width: 100%; }
 
 /* ===== Buttons ===== */
 .btn {
@@ -111,14 +111,14 @@ input, button, select, textarea { font-family: inherit; font-size: inherit; }
 /* ===== Cards ===== */
 .card {
     background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow-xs);
-    border: 1px solid var(--border); overflow: hidden;
+    border: 1px solid var(--border); overflow: hidden; min-width: 0; max-width: 100%;
 }
 .card-header {
     padding: 12px 16px; border-bottom: 1px solid var(--border);
     font-weight: 700; font-size: .9rem;
     display: flex; align-items: center; justify-content: space-between;
 }
-.card-body { padding: 12px 16px; }
+.card-body { padding: 12px 16px; overflow-x: auto; min-width: 0; }
 
 /* ===== Price Settings Panel ===== */
 .price-settings-panel {
@@ -161,12 +161,13 @@ input, button, select, textarea { font-family: inherit; font-size: inherit; }
 .summary-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 12px; margin-bottom: 16px;
+    gap: 12px; margin-bottom: 16px; max-width: 100%;
 }
 .summary-card {
     background: var(--card); border-radius: var(--radius); padding: 14px 16px;
     box-shadow: var(--shadow-xs); border: 1px solid var(--border);
     display: flex; flex-direction: column; gap: 4px; position: relative; overflow: hidden;
+    min-width: 0; word-break: break-word;
 }
 .summary-card::before {
     content: ''; position: absolute; top: 0; right: 0; width: 4px; height: 100%;
@@ -176,11 +177,11 @@ input, button, select, textarea { font-family: inherit; font-size: inherit; }
 .summary-card.info::before { background: var(--primary); }
 .summary-card.warning::before { background: var(--warning); }
 .summary-label { font-size: .78rem; color: var(--text-secondary); }
-.summary-value { font-size: 1.4rem; font-weight: 800; line-height: 1.2; }
-.summary-sub { font-size: .72rem; color: var(--text-muted); }
+.summary-value { font-size: 1.4rem; font-weight: 800; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; }
+.summary-sub { font-size: .72rem; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* ===== Tables ===== */
-.table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0 -16px; padding: 0 16px; }
+.table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; max-width: 100%; }
 .data-table { width: 100%; border-collapse: collapse; font-size: .8rem; }
 .data-table th {
     background: var(--bg); padding: 8px 10px; text-align: right;
@@ -227,10 +228,10 @@ input, button, select, textarea { font-family: inherit; font-size: inherit; }
 .badge-type2 { background: #faf5ff; color: #a855f7; border: 1px solid #e9d5ff; }
 
 /* ===== Charts ===== */
-.charts-grid { display: grid; grid-template-columns: 3fr 2fr; gap: 12px; margin-bottom: 16px; }
+.charts-grid { display: grid; grid-template-columns: 3fr 2fr; gap: 12px; margin-bottom: 16px; max-width: 100%; }
 .chart-card {
     background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow-xs);
-    border: 1px solid var(--border); padding: 14px 16px;
+    border: 1px solid var(--border); padding: 14px 16px; min-width: 0; overflow: hidden;
 }
 .chart-card h3 { font-size: .85rem; margin-bottom: 10px; color: var(--text-secondary); }
 .chart-card canvas { max-height: 300px; }
@@ -525,7 +526,7 @@ input, button, select, textarea { font-family: inherit; font-size: inherit; }
     .page-container { padding: 10px; }
 
     .price-settings-panel {
-        grid-template-columns: 1fr; gap: 12px; padding: 16px;
+        grid-template-columns: 1fr; gap: 12px; padding: 16px; max-width: 100%;
     }
 
     .summary-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
@@ -550,8 +551,8 @@ input, button, select, textarea { font-family: inherit; font-size: inherit; }
     .card-body { padding: 10px 12px; }
     .card-header { padding: 10px 12px; font-size: .85rem; }
 
-    .table-wrapper { margin: 0 -12px; padding: 0 12px; }
-    .data-table { font-size: .75rem; }
+    .table-wrapper { max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .data-table { font-size: .75rem; min-width: 500px; }
     .data-table th { padding: 6px 6px; font-size: .68rem; }
     .data-table td { padding: 6px 6px; }
 
