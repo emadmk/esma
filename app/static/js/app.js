@@ -1,8 +1,8 @@
 /* ===== Food Cost Analysis - Frontend App ===== */
 const $ = (s, p) => (p || document).querySelector(s);
 const $$ = (s, p) => [...(p || document).querySelectorAll(s)];
-const fmt = n => n == null ? '0' : Math.round(n).toLocaleString('fa-IR');
-const fmtEn = n => n == null ? '0' : Math.round(n).toLocaleString('en-US');
+const fmt = n => n == null ? '۰' : Math.round(n).toLocaleString('en-US');
+const fmtEn = n => n == null ? '0' : String(Math.round(n));
 
 let dashboardData = null;
 let charts = {};
